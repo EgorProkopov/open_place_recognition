@@ -2,7 +2,207 @@
 from typing import Dict, Optional, Union
 
 import MinkowskiEngine as ME  # noqa: N817
+
+import torch
 from torch import Tensor, nn
+
+
+class ResNetBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, identity_downsample=None, stride=1):
+        super(ResNetBlock, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU()
+        self.identity_downsample = identity_downsample
+
+    def forward(self, x):
+        identity = x
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = self.bn2(x)
+        if self.identity_downsample is not None:
+            identity = self.identity_downsample(identity)
+        x += identity
+        x = self.relu(x)
+        return x
+
+
+class ResNet18(nn.Module):
+    def __init__(self, in_channels=64, out_channels=512):
+        super(ResNet18, self).__init__()
+        self.in_channels = in_channels
+        self.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU()
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        # resnet layers
+        self.layer1 = self.__make_layer(64, 64, stride=1)
+        self.layer2 = self.__make_layer(64, 128, stride=2)
+        self.layer3 = self.__make_layer(128, 256, stride=2)
+        self.layer4 = self.__make_layer(256, out_channels, stride=2)
+
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+    def __make_layer(self, in_channels, out_channels, stride):
+        identity_downsample = None
+        if stride != 1:
+            identity_downsample = self.identity_downsample(in_channels, out_channels)
+
+        return nn.Sequential(
+            ResNetBlock(in_channels, out_channels, identity_downsample=identity_downsample, stride=stride),
+            ResNetBlock(out_channels, out_channels)
+        )
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
+        return x
+
+    def identity_downsample(self, in_channels, out_channels):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(out_channels)
+        )
+
+
+class ResNet10Block(nn.Module):
+    """"""
+    def __init__(self, in_channels, out_channels):
+        super(ResNet10Block, self).__init__()
+
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        self.res_block1 = self.__make_layer(in_channels=in_channels, out_channels=in_channels, stride=1)
+        self.res_block2 = self.__make_layer(in_channels=in_channels, out_channels=in_channels, stride=1)
+        self.res_block3 = self.__make_layer(in_channels=in_channels, out_channels=in_channels, stride=1)
+        self.res_block4 = self.__make_layer(in_channels=in_channels, out_channels=in_channels, stride=1)
+        self.res_block5 = self.__make_layer(in_channels=in_channels, out_channels=out_channels, stride=2)
+
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+    def __make_layer(self, in_channels, out_channels, stride):
+        identity_downsample = None
+        if stride != 1:
+            identity_downsample = self.identity_downsample(in_channels, out_channels)
+
+        return nn.Sequential(
+            ResNetBlock(in_channels, out_channels, identity_downsample=identity_downsample, stride=stride),
+            ResNetBlock(out_channels, out_channels)
+        )
+
+    def forward(self, x):
+        x = self.res_block1(x)
+        x = self.res_block2(x)
+        x = self.res_block3(x)
+        x = self.res_block4(x)
+        x = self.res_block5(x)
+
+        x = self.avgpool(x)
+        return x
+
+
+class SemanticEmbeddingV1(nn.Module):
+    def __init__(self, in_channels=65, out_channels=128):
+        super(SemanticEmbeddingV1, self).__init__()
+
+        self.resnet18 = ResNet18(in_channels=in_channels, out_channels=512)
+        self.final_conv = nn.Conv2d(in_channels=512, out_channels=out_channels, kernel_size=1)
+
+    def forward(self, x):
+        x = self.resnet18(x)
+        embedding = self.final_conv(x)
+        return embedding
+
+
+class SemanticFusionV1(nn.Module):
+    def __init__(self, in_channels=65, out_channels=128):
+        super(SemanticFusionV1, self).__init__()
+        self.sem_module1 = SemanticEmbeddingV1(in_channels=in_channels, out_channels=out_channels)
+        self.sem_module2 = SemanticEmbeddingV1(in_channels=in_channels, out_channels=out_channels)
+
+        self.flatten = nn.Flatten()
+
+        # TODO: надо посчитать in_features
+        self.semantic_fusion = nn.Sequential(
+            nn.Linear(in_features=128 * 2, out_features=128),
+            nn.ReLU(),
+            nn.Linear(in_features=128, out_features=128)
+        )
+
+    def forward(self, x1, x2):
+        embedding1 = self.flatten(self.sem_module1(x1))
+        embedding2 = self.flatten(self.sem_module2(x2))
+
+        # TODO: помнить про длины векторов
+        embedding = torch.concat((embedding1, embedding2), axis=1)
+        embedding = self.semantic_fusion(embedding)
+        return embedding
+
+
+class SemanticEmbeddingV2(nn.Module):
+    """Для одного тензора карт активации классов сегментации и для одного изображения, соответсвующего маске"""
+    def __init__(self, in_channels_image=3, in_channels_mask=65, out_channels=32):
+        super(SemanticEmbeddingV2, self).__init__()
+
+        self.main_branch_block1 = nn.Sequential(
+            ResNet10Block(in_channels=in_channels_mask, out_channels=64),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.main_branch_block2 = nn.Sequential(
+            ResNet10Block(in_channels=64*2, out_channels=128),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.main_branch_block3 = nn.Sequential(
+            ResNet10Block(in_channels=128 * 2, out_channels=256),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+
+        self.sub_branch_block1 = nn.Sequential(
+            ResNet10Block(in_channels=in_channels_image, out_channels=64),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.sub_branch_block2 = nn.Sequential(
+            ResNet10Block(in_channels=64 * 2, out_channels=128),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.sub_branch_block3 = nn.Sequential(
+            ResNet10Block(in_channels=128 * 2, out_channels=256),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+
+        self.final_conv = nn.Conv2d(in_channels=256*2, out_channels=out_channels, kernel_size=3, padding=1)
+
+    def forward(self, mask, x1):
+        features = self.main_branch_block1(mask)
+        sub_features = self.sub_branch_block1(x1)
+        features = torch.concat((features, sub_features), axis=1)
+
+        features = self.main_branch_block2(features)
+        sub_features = self.sub_branch_block2(sub_features)
+        features = torch.concat((features, sub_features), axis=1)
+
+        features = self.main_branch_block3(features)
+        sub_features = self.sub_branch_block3(sub_features)
+        features = torch.concat((features, sub_features), axis=1)
+
+        embedding = self.final_conv(features)
+        return embedding
+
 
 
 class ImageFeatureExtractor(nn.Module):
