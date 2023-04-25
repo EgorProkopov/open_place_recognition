@@ -55,6 +55,10 @@ def make_collate_fn(dataset: BaseDataset, batch_split_size: Optional[int] = None
             images = [e["image"] for e in data_list]
         if "range_image" in data_list[0]:
             range_images = [e["range_image"] for e in data_list]
+        if "semantic_back" in data_list[0]:
+            semantic_back = [e["semantic_back"] for e in data_list]
+        if "semantic_front" in data_list[0]:
+            semantic_front = [e["semantic_front"] for e in data_list]
 
         utms = torch.stack([e["utm"] for e in data_list], dim=0)
 
@@ -69,6 +73,10 @@ def make_collate_fn(dataset: BaseDataset, batch_split_size: Optional[int] = None
                 result["images"] = torch.stack(images, dim=0)
             if "range_image" in data_list[0]:
                 result["range_images"] = torch.stack(range_images, dim=0)
+            if "semantic_back" in data_list[0]:
+                result["semantic_back"] = torch.stack(semantic_back, dim=0)
+            if "semantic_front" in data_list[0]:
+                result["semantic_front"] = torch.stack(semantic_front, dim=0)
             result["utms"] = utms
         else:  # split the batch into chunks
             raise NotImplementedError("Multistaged batch training not yet implemented")
