@@ -13,6 +13,7 @@ from albumentations.pytorch import ToTensorV2
 from scipy.linalg import expm, norm
 from torch import Tensor
 from torchvision import transforms
+from utils import stuff_classes, blacklist
 
 
 class DefaultImageTransform:
@@ -151,6 +152,55 @@ class DefaultCloudSetTransform:
 # TODO: Format code properly, add typing and remove temporary flake8 and mypy disablers
 # flake8: noqa
 # mypy: ignore-errors
+
+class DefaultSemanticTransform:
+    """Default segmentation preprocess transform."""
+
+    def _channel(self, image):
+        num_tags = len(stuff_classes)
+        image_shape = image.shape
+
+        height, width = image_shape[0], image_shape[1]
+        new_image = np.zeros([height, width, num_tags])
+
+        for i in range(height):
+            for j in range(width - 1):
+
+                if not (stuff_classes[image[i, j]] in blacklist):
+                    new_image[i, j, image[i, j]] = 1
+
+    def __init__(self, train: bool = False) -> None:
+        """Default segmentation preprocess pipeline.
+
+        Note:
+            Multichannelling.
+
+        Args:
+            train (bool): If False, no transforms will be applied. Defaults to False.
+        """
+
+        if train:
+            self.transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((128, 128)),
+                transforms.Normalize(mean=[0.5],
+                                     std=[0.5]),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip()
+            ])
+        else:
+            self.transform = transforms.Compose([])
+
+    def __call__(self, semantic: np.array) -> Tensor:
+        """Apply the transformations to the given point cloud.
+
+        Args:
+            semantic (Tensor): The coordinates tensor.
+
+        Returns:
+            Tensor: Augmented coordinates tensor.
+        """
+        return self.transform(semantic)
 
 
 class RandomFlip:

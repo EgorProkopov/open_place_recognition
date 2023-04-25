@@ -11,6 +11,7 @@ from opr.datasets.augmentations import (
     DefaultCloudSetTransform,
     DefaultCloudTransform,
     DefaultImageTransform,
+    DefaultSemanticTransform
 )
 from opr.datasets.base import BaseDataset
 
@@ -27,6 +28,7 @@ class PhystechCampus(BaseDataset):
         subset: Literal["train", "val", "test"] = "test",
         modalities: Union[str, Tuple[str, ...]] = ("image", "cloud"),
         images_subdir: Optional[Union[str, Path]] = "front_cam",
+        semantic_subdir:  Optional[Union[str, Path]] = "labels",
         mink_quantization_size: Optional[float] = 0.5,
     ) -> None:
         """Phystech Campus dataset implementation.
@@ -54,6 +56,11 @@ class PhystechCampus(BaseDataset):
                 raise ValueError(
                     "Given 'images' in 'modalities' argument, but 'images_subdir' is set to None"
                 )
+
+        if "semantic" in self.modalities:
+            if images_subdir:
+                self.semantic_subdir = Path(semantic_subdir)
+
         self.clouds_subdir = Path("lidar")
 
         self.mink_quantization_size = mink_quantization_size
@@ -65,6 +72,8 @@ class PhystechCampus(BaseDataset):
         self.image_transform = DefaultImageTransform(train=(subset == "train"), resize=(320, 192))
         self.cloud_transform = DefaultCloudTransform(train=(subset == "train"))
         self.cloud_set_transform = DefaultCloudSetTransform(train=(subset == "train"))
+
+        self.semantic_transform = DefaultSemanticTransform(train=(subset == "train"))
 
     def __getitem__(self, idx: int) -> Dict[str, Union[int, Tensor]]:  # noqa: D105
         data: Dict[str, Union[int, Tensor]] = {"idx": idx}
@@ -81,7 +90,12 @@ class PhystechCampus(BaseDataset):
             pc_filepath = track_dir / self.clouds_subdir / f"{row['lidar_ts']}.bin"
             pc = self._load_pc(pc_filepath)
             data["cloud"] = pc
+
+        if "semantic" in self.modalities and self.semantic_subdir is not None:
+            pass
+
         return data
+
 
     def _load_pc(self, filepath: Union[str, Path]) -> Tensor:
         pc = np.fromfile(filepath, dtype=np.float32).reshape((-1, 4))[:, :-1]
