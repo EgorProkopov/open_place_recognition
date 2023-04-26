@@ -3,7 +3,7 @@ dataset:
   _target_: opr.datasets.custom.PhystechCampus
 
   dataset_root: /home/docker_opr/Datasets/splitted/train
-  modalities: [semantic,]
+  modalities: [image, cloud, semantic]
   semantic_front_subdir: labels/front_cam
   semantic_back_subdir:  labels/back_cam
   mink_quantization_size: 0.01

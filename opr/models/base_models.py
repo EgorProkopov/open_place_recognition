@@ -226,8 +226,10 @@ class FusionSemanticV2(nn.Module):
         )
 
     def forward(self, mask1, x1, mask2, x2):
-        embedding1 = self.flatten(self.sem_module1(mask1, x1))
-        embedding2 = self.flatten(self.sem_module2(mask2, x2))
+        embedding1 = self.sem_module1(mask1, x1)
+        embedding1 = self.flatten(embedding1)
+        embedding2 = self.sem_module2(mask2, x2)
+        embedding2 = self.flatten(embedding2)
 
         # TODO: помнить про длины векторов
         embedding = torch.concat((embedding1, embedding2), axis=1)
