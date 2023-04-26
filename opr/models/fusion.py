@@ -19,5 +19,5 @@ class Concat(FusionModule):
         assert "image" in data
         assert "cloud" in data
         assert "semantic" in data
-        fusion_global_descriptor = torch.concat([data["image"], data["cloud"]], dim=1)
+        fusion_global_descriptor = torch.concat([data["image"], data["cloud"], data["semantic"]], dim=1)
         return fusion_global_descriptor

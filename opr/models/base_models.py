@@ -138,9 +138,9 @@ class SemanticEmbeddingV1(nn.Module):
         return embedding
 
 
-class SemanticFusionV1(nn.Module):
+class FusionSemanticV1(nn.Module):
     def __init__(self, in_channels=65, out_channels=128):
-        super(SemanticFusionV1, self).__init__()
+        super(FusionSemanticV1, self).__init__()
         self.sem_module1 = SemanticEmbeddingV1(in_channels=in_channels, out_channels=out_channels)
         self.sem_module2 = SemanticEmbeddingV1(in_channels=in_channels, out_channels=out_channels)
 
@@ -212,6 +212,30 @@ class SemanticEmbeddingV2(nn.Module):
         embedding = self.final_conv(features)
         return embedding
 
+
+class FusionSemanticV2(nn.Module):
+    def __init__(self, in_channels_image=3, in_channels_mask=65, out_channels=128):
+        super(FusionSemanticV2, self).__init__()
+        self.sem_module1 = SemanticEmbeddingV2(in_channels_mask=in_channels_image, out_channels=out_channels)
+        self.sem_module2 = SemanticEmbeddingV2(in_channels_mask=in_channels_image, out_channels=out_channels)
+
+        self.flatten = nn.Flatten()
+
+        # TODO: надо посчитать in_features
+        self.semantic_fusion = nn.Sequential(
+            nn.Linear(in_features=128 * 2, out_features=128),
+            nn.ReLU(),
+            nn.Linear(in_features=128, out_features=128)
+        )
+
+    def forward(self, mask1, x1, mask2, x2):
+        embedding1 = self.flatten(self.sem_module1(mask1, x1))
+        embedding2 = self.flatten(self.sem_module2(mask2, x2))
+
+        # TODO: помнить про длины векторов
+        embedding = torch.concat((embedding1, embedding2), axis=1)
+        embedding = self.semantic_fusion(embedding)
+        return embedding
 
 
 class ImageFeatureExtractor(nn.Module):
@@ -342,6 +366,7 @@ class ComposedModel(nn.Module):
         self,
         image_module: Optional[ImageModule] = None,
         cloud_module: Optional[CloudModule] = None,
+        semantic_module: Optional[FusionSemanticV1] = None,
         fusion_module: Optional[FusionModule] = None,
     ) -> None:
         """Composition model for multimodal architectures.
@@ -349,12 +374,14 @@ class ComposedModel(nn.Module):
         Args:
             image_module (ImageModule, optional): Image modality branch. Defaults to None.
             cloud_module (CloudModule, optional): Cloud modality branch. Defaults to None.
+            semantic_module: semantic modality branch
             fusion_module (FusionModule, optional): Module to fuse different modalities. Defaults to None.
         """
         super().__init__()
 
         self.image_module = image_module
         self.cloud_module = cloud_module
+        self.semantic_module = semantic_module
         self.fusion_module = fusion_module
         if self.cloud_module:
             self.sparse_cloud = self.cloud_module.sparse
@@ -363,6 +390,7 @@ class ComposedModel(nn.Module):
         out_dict: Dict[str, Optional[Tensor]] = {
             "image": None,
             "cloud": None,
+            "semantic": None,
             "fusion": None,
         }
 
@@ -375,6 +403,10 @@ class ComposedModel(nn.Module):
             else:
                 raise NotImplementedError("Currently we support only sparse cloud modules.")
             out_dict["cloud"] = self.cloud_module(cloud)
+
+        if self.semantic_module is not None:
+            # TODO: посмотреть, что пихать в семантик модуль из даталоадера
+            out_dict["semantic"] = self.semantic_module()
 
         if self.fusion_module is not None:
             out_dict["fusion"] = self.fusion_module(out_dict)
