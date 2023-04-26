@@ -97,15 +97,17 @@ class PhystechCampus(BaseDataset):
         if "semantic" in self.modalities and (self.semantic_front_subdir is not None or self.semantic_back_subdir is not None):
             if self.semantic_front_subdir:
                 im_filepath = track_dir / self.semantic_front_subdir / f"{row[f'front_cam_ts']}.png"
-                front = cv2.imread(str(im_filepath))
-                front = cv2.cvtColor(front, cv2.COLOR_BGR2RGB)
+                front = cv2.imread(str(im_filepath), 0)
+                front = cv2.resize(front, (128, 128))
+                # front = cv2.cvtColor(front, cv2.COLOR_BGR2RGB)
                 front = self.semantic_transform(front)
                 data["semantic_front"] = front
 
             if self.semantic_back_subdir:
                 im_filepath = track_dir / self.semantic_back_subdir / f"{row[f'back_cam_ts']}.png"
-                back = cv2.imread(str(im_filepath))
-                back = cv2.cvtColor(back, cv2.COLOR_BGR2RGB)
+                back = cv2.imread(str(im_filepath), 0)
+                back = cv2.resize(back, (128, 128))
+                # back = cv2.cvtColor(back, cv2.COLOR_BGR2RGB)
                 back = self.semantic_transform(back)
                 data["semantic_back"] = back
 
