@@ -6,8 +6,6 @@ import MinkowskiEngine as ME  # noqa: N817
 import torch
 from torch import Tensor, nn
 
-#from opr.models.resnet import ResNet18FPNExtractor
-
 
 class ResNetBlock(nn.Module):
     def __init__(self, in_channels, out_channels, identity_downsample=None, stride=1):
