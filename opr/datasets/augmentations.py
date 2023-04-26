@@ -280,7 +280,12 @@ class DefaultSemanticTransform:
                 transforms.RandomVerticalFlip()
             ])
         else:
-            self.transform = transforms.Compose([])
+            self.transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Resize((128, 128)),
+                transforms.Normalize(mean=[0.5],
+                                     std=[0.5])
+            ])
 
     def __call__(self, semantic: np.array) -> Tensor:
         """Apply the transformations to the given point cloud.

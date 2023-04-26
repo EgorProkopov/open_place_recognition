@@ -103,7 +103,7 @@ class PhystechCampus(BaseDataset):
                 data["semantic_front"] = front
 
             if self.semantic_back_subdir:
-                im_filepath = track_dir / self.semantic_front_subdir / f"{row[f'back_cam_ts']}.png"
+                im_filepath = track_dir / self.semantic_back_subdir / f"{row[f'back_cam_ts']}.png"
                 back = cv2.imread(str(im_filepath))
                 back = cv2.cvtColor(back, cv2.COLOR_BGR2RGB)
                 back = self.semantic_transform(back)
