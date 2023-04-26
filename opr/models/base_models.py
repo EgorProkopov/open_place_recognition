@@ -34,6 +34,7 @@ class ResNetBlock(nn.Module):
 
 
 class ResNet18(nn.Module):
+    layers = (64, 64, 128, 256)
     def __init__(self, in_channels=64, out_channels=512):
         super(ResNet18, self).__init__()
         self.in_channels = in_channels
@@ -120,16 +121,16 @@ class ResNet10Block(nn.Module):
 
 class SemanticEmbeddingV1(nn.Module):
     # TODO: Попробовать сделать на основе резнет выше
+    # так просто модели заменить не?
     def __init__(self, in_channels=65, out_channels=512):
         super(SemanticEmbeddingV1, self).__init__()
 
-        # self.resnet18 = ResNet18(in_channels=in_channels, out_channels=512)
-        # self.final_conv = nn.Conv2d(in_channels=512, out_channels=out_channels, kernel_size=1)
-
-        self.resnet18 = ResNet18FPNExtractor(pretrained=False)
-        resnet18layers = list(self.resnet18.layers)
-        resnet18layers[0] = in_channels
-        self.resnet18.layers = tuple(resnet18layers)
+        self.resnet18 = ResNet18(in_channels=in_channels, out_channels=512)
+        # self.resnet18 = ResNet18FPNExtractor(pretrained=False)
+        # resnet18layers = list(self.resnet18.layers)
+        # resnet18layers = list(self.resnet18.layers)
+        # resnet18layers[0] = in_channels
+        # self.resnet18.layers = tuple(resnet18layers)
         self.final_conv = nn.Conv2d(in_channels=512, out_channels=out_channels, kernel_size=1)
 
     def forward(self, x):
@@ -146,7 +147,6 @@ class FusionSemanticV1(nn.Module):
 
         self.flatten = nn.Flatten()
 
-        # TODO: надо посчитать in_features
         self.semantic_fusion = nn.Sequential(
             nn.Linear(in_features=128 * 2, out_features=128),
             nn.ReLU(),
@@ -157,7 +157,6 @@ class FusionSemanticV1(nn.Module):
         embedding1 = self.flatten(self.sem_module1(x1))
         embedding2 = self.flatten(self.sem_module2(x2))
 
-        # TODO: помнить про длины векторов
         embedding = torch.concat((embedding1, embedding2), axis=1)
         embedding = self.semantic_fusion(embedding)
         return embedding
