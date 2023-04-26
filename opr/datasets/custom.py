@@ -28,7 +28,8 @@ class PhystechCampus(BaseDataset):
         subset: Literal["train", "val", "test"] = "test",
         modalities: Union[str, Tuple[str, ...]] = ("image", "cloud"),
         images_subdir: Optional[Union[str, Path]] = "front_cam",
-        semantic_subdir:  Optional[Union[str, Path]] = "labels",
+        semantic_front_subdir:  Optional[Union[str, Path]] = "labels/front_cam",
+        semantic_back_subdir: Optional[Union[str, Path]] = "labels/back_cam",
         mink_quantization_size: Optional[float] = 0.5,
     ) -> None:
         """Phystech Campus dataset implementation.
@@ -58,8 +59,10 @@ class PhystechCampus(BaseDataset):
                 )
 
         if "semantic" in self.modalities:
-            if images_subdir:
-                self.semantic_subdir = Path(semantic_subdir)
+            if semantic_front_subdir:
+                self.semantic_front_subdir = Path(semantic_front_subdir)
+            if semantic_back_subdir:
+                self.semantic_back_subdir = Path(semantic_back_subdir)
 
         self.clouds_subdir = Path("lidar")
 
@@ -91,11 +94,23 @@ class PhystechCampus(BaseDataset):
             pc = self._load_pc(pc_filepath)
             data["cloud"] = pc
 
-        if "semantic" in self.modalities and self.semantic_subdir is not None:
-            pass
+        if "semantic" in self.modalities and ( self.semantic_front_subdir is not None \
+                                                or self.semantic_back_subdir is not None):
+            if self.semantic_front_subdir:
+                im_filepath = track_dir / self.semantic_front_subdir / f"{row[f'front_cam_ts']}.png"
+                front = cv2.imread(str(im_filepath))
+                front = cv2.cvtColor(front, cv2.COLOR_BGR2RGB)
+                front = self.semantic_transform(front)
+                data["semantic_front"] = front
+
+            if self.semantic_back_subdir:
+                im_filepath = track_dir / self.semantic_front_subdir / f"{row[f'back_cam_ts']}.png"
+                back = cv2.imread(str(im_filepath))
+                back = cv2.cvtColor(back, cv2.COLOR_BGR2RGB)
+                back = self.semantic_transform(back)
+                data["semantic_back"] = back
 
         return data
-
 
     def _load_pc(self, filepath: Union[str, Path]) -> Tensor:
         pc = np.fromfile(filepath, dtype=np.float32).reshape((-1, 4))[:, :-1]
