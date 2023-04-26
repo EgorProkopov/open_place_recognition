@@ -6,6 +6,8 @@ import MinkowskiEngine as ME  # noqa: N817
 import torch
 from torch import Tensor, nn
 
+from opr.models.resnet import ResNet18FPNExtractor
+
 
 class ResNetBlock(nn.Module):
     def __init__(self, in_channels, out_channels, identity_downsample=None, stride=1):
@@ -117,10 +119,17 @@ class ResNet10Block(nn.Module):
 
 
 class SemanticEmbeddingV1(nn.Module):
-    def __init__(self, in_channels=65, out_channels=128):
+    # TODO: Попробовать сделать на основе резнет выше
+    def __init__(self, in_channels=65, out_channels=512):
         super(SemanticEmbeddingV1, self).__init__()
 
-        self.resnet18 = ResNet18(in_channels=in_channels, out_channels=512)
+        # self.resnet18 = ResNet18(in_channels=in_channels, out_channels=512)
+        # self.final_conv = nn.Conv2d(in_channels=512, out_channels=out_channels, kernel_size=1)
+
+        self.resnet18 = ResNet18FPNExtractor(pretrained=False)
+        resnet18layers = list(self.resnet18.layers)
+        resnet18layers[0] = in_channels
+        self.resnet18.layers = tuple(resnet18layers)
         self.final_conv = nn.Conv2d(in_channels=512, out_channels=out_channels, kernel_size=1)
 
     def forward(self, x):
