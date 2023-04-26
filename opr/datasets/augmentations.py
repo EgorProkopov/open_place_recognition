@@ -260,6 +260,8 @@ class DefaultSemanticTransform:
                 if not (stuff_classes[image[i, j]] in blacklist):
                     new_image[i, j, image[i, j]] = 1
 
+        return new_image
+
     def __init__(self, train: bool = False) -> None:
         """Default segmentation preprocess pipeline.
 
@@ -296,6 +298,9 @@ class DefaultSemanticTransform:
         Returns:
             Tensor: Augmented coordinates tensor.
         """
+
+        semantic = self._channel(semantic)
+
         return self.transform(semantic)
 
 
