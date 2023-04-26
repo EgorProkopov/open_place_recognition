@@ -20,7 +20,7 @@ class PhystechCampus(BaseDataset):
     """Phystech Campus dataset implementation."""
 
     valid_subsets = ("train", "val", "test")
-    valid_modalities = ("image", "cloud")
+    valid_modalities = ("image", "cloud", "semantic")
 
     def __init__(
         self,
