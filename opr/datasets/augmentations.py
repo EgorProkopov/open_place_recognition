@@ -275,7 +275,6 @@ class DefaultSemanticTransform:
         if train:
             self.transform = transforms.Compose([
                 transforms.ToTensor(),
-                transforms.Resize((128, 128)),
                 transforms.Normalize(mean=[0.5],
                                      std=[0.5]),
                 transforms.RandomHorizontalFlip(),
@@ -284,7 +283,6 @@ class DefaultSemanticTransform:
         else:
             self.transform = transforms.Compose([
                 transforms.ToTensor(),
-                transforms.Resize((128, 128)),
                 transforms.Normalize(mean=[0.5],
                                      std=[0.5])
             ])
