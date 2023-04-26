@@ -96,5 +96,5 @@ def minkloc_multimodal(weights: Optional[Union[str, Path]] = None) -> ComposedMo
         if not Path(weights).exists():
             raise ValueError(f"Given weights file does not exist: {weights}")
         ckpt = torch.load(weights)["model_state_dict"]
-        model.load_state_dict(ckpt)
+        model.load_state_dict(ckpt, strict=False)
     return model
