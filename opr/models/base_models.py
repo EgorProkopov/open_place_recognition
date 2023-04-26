@@ -152,8 +152,10 @@ class FusionSemanticV1(nn.Module):
         )
 
     def forward(self, x1, x2):
-        embedding1 = self.flatten(self.sem_module1(x1))
-        embedding2 = self.flatten(self.sem_module2(x2))
+        embedding1 = self.sem_module1(x1)
+        embedding1 = self.flatten(embedding1)
+        embedding2 = self.sem_module2(x2)
+        embedding2 = self.flatten(embedding2)
 
         embedding = torch.concat((embedding1, embedding2), axis=1)
         embedding = self.semantic_fusion(embedding)
