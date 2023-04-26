@@ -18,5 +18,6 @@ class Concat(FusionModule):
     def forward(self, data: Dict[str, Union[Tensor, ME.SparseTensor]]) -> Tensor:  # noqa: D102
         assert "image" in data
         assert "cloud" in data
+        assert "semantic" in data
         fusion_global_descriptor = torch.concat([data["image"], data["cloud"]], dim=1)
         return fusion_global_descriptor
