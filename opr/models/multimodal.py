@@ -57,7 +57,41 @@ def minkloc_multimodal(weights: Optional[Union[str, Path]] = None) -> ComposedMo
             "fusion_module": {"_target_": "opr.models.fusion.Concat"},
         }
     )
-    model = instantiate(model_config)
+    model_config_semantic = DictConfig(
+        {
+            "_target_": "opr.models.base_models.ComposedModel",
+            "image_module": {
+                "_target_": "opr.models.base_models.ImageModule",
+                "backbone": {
+                    "_target_": "opr.models.resnet.ResNet18FPNExtractor",
+                    "lateral_dim": 128,
+                    "fh_num_bottom_up": 4,
+                    "fh_num_top_down": 0,
+                    "pretrained": True,
+                },
+                "head": {"_target_": "opr.models.layers.gem.GeM", "p": 3, "eps": 1e-06},
+            },
+            "cloud_module": {
+                "_target_": "opr.models.base_models.CloudModule",
+                "backbone": {
+                    "_target_": "opr.models.minkloc.MinkResNetFPNExtractor",
+                    "out_channels": 128,
+                    "num_top_down": 1,
+                    "conv0_kernel_size": 5,
+                    "block": "ECABasicBlock",
+                    "layers": [1, 1, 1],
+                    "planes": [32, 64, 64],
+                },
+                "head": {"_target_": "opr.models.layers.gem.MinkGeM", "p": 3, "eps": 1e-06},
+            },
+            "semantic_module": {
+                "_target_": "opr.models.base_models.FusionSemanticV1"
+            },
+            "fusion_module": {"_target_": "opr.models.fusion.Concat"},
+        }
+    )
+
+    model = instantiate(model_config_semantic)
     if weights is not None:
         if not Path(weights).exists():
             raise ValueError(f"Given weights file does not exist: {weights}")
