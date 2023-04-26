@@ -34,3 +34,6 @@ cloud_module:
 
 fusion_module:
   _target_: opr.models.fusion.Concat
+
+semantic_module:
+  _target_: opr.models.base_models.FusionSemanticV1
