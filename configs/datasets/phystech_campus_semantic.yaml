@@ -1,0 +1,19 @@
+
+dataset:
+  _target_: opr.datasets.custom_text.PhystechCampus
+
+  dataset_root: /home/docker_opr/Datasets/splitted/train
+  modalities: [semantic,]
+  semantic_subdir: ['labels/front_cam', 'labels/back_cam']
+  mink_quantization_size: 0.01
+
+sampler:
+  _target_: opr.datasets.samplers.batch_sampler.BatchSampler
+
+  batch_size: 16
+  batch_size_limit: null
+  batch_expansion_rate: null
+  positives_per_group: 2
+  seed: 3121999
+
+num_workers: 2
