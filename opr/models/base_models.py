@@ -402,8 +402,7 @@ class ComposedModel(nn.Module):
             out_dict["cloud"] = self.cloud_module(cloud)
 
         if self.semantic_module is not None:
-            # TODO: посмотреть, что пихать в семантик модуль из даталоадера
-            out_dict["semantic"] = self.semantic_module()
+            out_dict["semantic"] = self.semantic_module(batch["semantic_front"], batch["semantic_back"])
 
         if self.fusion_module is not None:
             out_dict["fusion"] = self.fusion_module(out_dict)

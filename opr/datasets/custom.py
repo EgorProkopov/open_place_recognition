@@ -94,8 +94,7 @@ class PhystechCampus(BaseDataset):
             pc = self._load_pc(pc_filepath)
             data["cloud"] = pc
 
-        if "semantic" in self.modalities and ( self.semantic_front_subdir is not None \
-                                                or self.semantic_back_subdir is not None):
+        if "semantic" in self.modalities and (self.semantic_front_subdir is not None or self.semantic_back_subdir is not None):
             if self.semantic_front_subdir:
                 im_filepath = track_dir / self.semantic_front_subdir / f"{row[f'front_cam_ts']}.png"
                 front = cv2.imread(str(im_filepath))
