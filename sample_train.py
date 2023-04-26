@@ -16,7 +16,9 @@ EPOCHS = 60
 IMAGE_LR = 0.0001
 CLOUD_LR = 0.001
 FUSION_LR = 0.001
+SEMANTIC_LR = 0.0001
 WEIGHT_DECAY = 0.0001
+
 
 SCHEDULER_GAMMA = 0.1
 SCHEDULER_STEPS = [40]
@@ -47,6 +49,8 @@ if __name__ == "__main__":
         params_list.append({"params": model.image_module.parameters(), "lr": IMAGE_LR})
     if model.cloud_module is not None and CLOUD_LR is not None:
         params_list.append({"params": model.cloud_module.parameters(), "lr": CLOUD_LR})
+    if model.semantic_module is not None and SEMANTIC_LR is not None:
+        params_list.append({"params": model.semantic_module.parameters(), "lr": SEMANTIC_LR})
     if model.fusion_module is not None and FUSION_LR is not None:
         params_list.append({"params": model.fusion_module.parameters(), "lr": FUSION_LR})
     optimizer = Adam(params_list, weight_decay=WEIGHT_DECAY)
